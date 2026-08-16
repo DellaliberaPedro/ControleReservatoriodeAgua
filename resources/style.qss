@@ -1,0 +1,87 @@
+QWidget {
+    background-color: #2b2b2b;
+    color: #d4d4d4;
+    font-family: "Segoe UI", "Arial", sans-serif;
+    font-size: 12px;
+}
+
+QMainWindow, QDialog {
+    background-color: #2b2b2b;
+}
+
+QGroupBox {
+    background-color: #333333;
+    border: 1px solid #454545;
+    border-radius: 2px;
+    margin-top: 14px;
+    padding: 12px 8px 8px 8px;
+    font-weight: 600;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    left: 10px;
+    padding: 0 4px;
+    color: #b0b0b0;
+    font-size: 11px;
+}
+
+QLabel {
+    color: #c0c0c0;
+}
+
+QPushButton {
+    background-color: #3c3c3c;
+    border: 1px solid #555555;
+    border-radius: 2px;
+    padding: 7px 14px;
+    color: #d4d4d4;
+}
+
+QPushButton:hover {
+    background-color: #454545;
+}
+
+#btn_emergencia {
+    background-color: #7a2419;
+    border: 1px solid #9b2f21;
+    color: #f0dede;
+    font-weight: 600;
+}
+
+#btn_emergencia:hover {
+    background-color: #8f2b1e;
+}
+
+QLCDNumber {
+    background-color: #1a1a1a;
+    border: 1px solid #454545;
+    border-radius: 2px;
+    color: #d99a2b;
+}
+
+QTableWidget {
+    background-color: #262626;
+    alternate-background-color: #2c2c2c;
+    gridline-color: #3d3d3d;
+    border: 1px solid #454545;
+    selection-background-color: #45566b;
+}
+
+QHeaderView::section {
+    background-color: #3c3c3c;
+    color: #b0b0b0;
+    padding: 6px;
+    border: none;
+    border-right: 1px solid #454545;
+    font-weight: 600;
+}
+
+QComboBox, QSpinBox, QDoubleSpinBox {
+    background-color: #1e1e1e;
+    border: 1px solid #454545;
+    border-radius: 2px;
+    padding: 5px;
+    color: #d4d4d4;
+}
