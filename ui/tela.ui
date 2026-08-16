@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
-    <height>600</height>
+    <width>1180</width>
+    <height>860</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -15,57 +15,373 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="layout_principal">
+
     <item>
-     <widget class="QGroupBox" name="group_telemetria">
-      <property name="title">
-       <string>Telemetria</string>
+     <widget class="QLabel" name="lbl_titulo">
+      <property name="text">
+       <string>Controle de Reservatório de Água — Supervisão de Qualidade</string>
       </property>
-      <layout class="QGridLayout" name="grid_telemetria">
-       <item row="0" column="0">
-        <widget class="QLabel" name="lbl_temperatura">
-         <property name="text">
-          <string>Temperatura (°C)</string>
-         </property>
-        </widget>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">font-size: 20px; font-weight: bold; padding: 8px;</string>
+      </property>
+     </widget>
+    </item>
+
+    <item>
+     <layout class="QHBoxLayout" name="layout_linha_topo">
+
+      <item>
+       <widget class="QGroupBox" name="group_telemetria">
+        <property name="title">
+         <string>Telemetria</string>
+        </property>
+        <layout class="QGridLayout" name="grid_telemetria">
+         <item row="0" column="0">
+          <widget class="QLabel" name="lbl_temperatura">
+           <property name="text">
+            <string>Temperatura (°C)</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLCDNumber" name="lcd_temperatura">
+           <property name="digitCount">
+            <number>5</number>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="lbl_tds">
+           <property name="text">
+            <string>TDS (ppm)</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QLCDNumber" name="lcd_tds">
+           <property name="digitCount">
+            <number>5</number>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0">
+          <widget class="QLabel" name="lbl_turbidez">
+           <property name="text">
+            <string>Turbidez (NTU)</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="QLCDNumber" name="lcd_turbidez">
+           <property name="digitCount">
+            <number>5</number>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="0">
+          <widget class="QLabel" name="lbl_iqa">
+           <property name="text">
+            <string>IQA calculado</string>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">font-weight: bold;</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="1">
+          <widget class="QLCDNumber" name="lcd_iqa">
+           <property name="digitCount">
+            <number>5</number>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+
+      <item>
+       <widget class="QGroupBox" name="group_estado">
+        <property name="title">
+         <string>Estado da Válvula</string>
+        </property>
+        <layout class="QVBoxLayout" name="layout_estado">
+         <item>
+          <widget class="QLabel" name="lbl_valvula_status">
+           <property name="text">
+            <string>Válvula: ABERTA / NORMAL</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>48</height>
+            </size>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">background-color: #2ecc71; color: white; font-weight: bold; border-radius: 4px; padding: 8px;</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="btn_emergencia">
+           <property name="text">
+            <string>CORTE EMERGENCIAL — FECHAR VÁLVULA</string>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>56</height>
+            </size>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="lbl_ultimo_evento">
+           <property name="text">
+            <string>Nenhum evento registrado ainda.</string>
+           </property>
+           <property name="wordWrap">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+
+      <item>
+       <widget class="QGroupBox" name="group_setpoints">
+        <property name="title">
+         <string>Limites de Alerta</string>
+        </property>
+        <layout class="QFormLayout" name="form_setpoints">
+         <item row="0" column="0">
+          <widget class="QLabel" name="lbl_limite_tds">
+           <property name="text">
+            <string>Limite TDS (ppm)</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QDoubleSpinBox" name="spin_limite_tds">
+           <property name="maximum">
+            <double>1000.000000000000000</double>
+           </property>
+           <property name="value">
+            <double>300.000000000000000</double>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="lbl_limite_turbidez">
+           <property name="text">
+            <string>Limite Turbidez (NTU)</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QDoubleSpinBox" name="spin_limite_turbidez">
+           <property name="maximum">
+            <double>100.000000000000000</double>
+           </property>
+           <property name="value">
+            <double>5.000000000000000</double>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+
+     </layout>
+    </item>
+
+    <item>
+     <widget class="QGroupBox" name="group_grafico">
+      <property name="title">
+       <string>Tendência</string>
+      </property>
+      <layout class="QVBoxLayout" name="layout_graficos">
+       <item>
+        <layout class="QHBoxLayout" name="layout_graficos_detalhe">
+         <item>
+          <widget class="QWidget" name="chart_temperatura" native="true">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>220</height>
+            </size>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QWidget" name="chart_tds" native="true">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>220</height>
+            </size>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QWidget" name="chart_turbidez" native="true">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>220</height>
+            </size>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </item>
-       <item row="0" column="1">
-        <widget class="QLCDNumber" name="lcd_temperatura">
-         <property name="digitCount">
-          <number>5</number>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="0">
-        <widget class="QLabel" name="lbl_tds">
-         <property name="text">
-          <string>TDS (ppm)</string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="1">
-        <widget class="QLCDNumber" name="lcd_tds">
-         <property name="digitCount">
-          <number>5</number>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="0">
-        <widget class="QLabel" name="lbl_turbidez">
-         <property name="text">
-          <string>Turbidez (NTU)</string>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="1">
-        <widget class="QLCDNumber" name="lcd_turbidez">
-         <property name="digitCount">
-          <number>5</number>
+       <item>
+        <widget class="QWidget" name="chart_geral" native="true">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>240</height>
+          </size>
          </property>
         </widget>
        </item>
       </layout>
      </widget>
     </item>
+
+    <item>
+     <widget class="QGroupBox" name="group_historico">
+      <property name="title">
+       <string>Histórico de Eventos</string>
+      </property>
+      <layout class="QVBoxLayout" name="layout_historico">
+       <item>
+        <widget class="QTableWidget" name="table_historico">
+         <property name="alternatingRowColors">
+          <bool>true</bool>
+         </property>
+         <property name="columnCount">
+          <number>4</number>
+         </property>
+         <property name="editTriggers">
+          <set>QAbstractItemView::NoEditTriggers</set>
+         </property>
+         <property name="selectionBehavior">
+          <enum>QAbstractItemView::SelectRows</enum>
+         </property>
+         <column>
+          <property name="text">
+           <string>Data / Hora</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Tipo</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Descrição</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Valor Medido</string>
+          </property>
+         </column>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+
+    <item>
+     <widget class="QGroupBox" name="group_serial">
+      <property name="title">
+       <string>Comunicação Serial</string>
+      </property>
+      <layout class="QHBoxLayout" name="layout_serial">
+       <item>
+        <widget class="QLabel" name="lbl_porta_com">
+         <property name="text">
+          <string>Porta COM:</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QComboBox" name="combo_porta_com">
+         <item>
+          <property name="text">
+           <string>COM1</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>COM3</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>COM5</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="lbl_baud_rate">
+         <property name="text">
+          <string>Baud Rate:</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QComboBox" name="combo_baud_rate">
+         <item>
+          <property name="text">
+           <string>9600</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>115200</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btn_conectar">
+         <property name="text">
+          <string>Conectar</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btn_desconectar">
+         <property name="text">
+          <string>Desconectar</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="lbl_status_conexao">
+         <property name="text">
+          <string>Status: Desconectado</string>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">font-weight: bold; color: #c0392b;</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+
    </layout>
   </widget>
   <widget class="QMenuBar" name="menubar">
@@ -73,7 +389,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>800</width>
+     <width>1180</width>
      <height>22</height>
     </rect>
    </property>
