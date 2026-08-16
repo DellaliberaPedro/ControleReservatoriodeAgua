@@ -9,15 +9,16 @@ regra de negócio, só o desenho.
 from datetime import datetime, timedelta
 
 from PySide6.QtCharts import QChart, QChartView, QDateTimeAxis, QLineSeries, QValueAxis
-from PySide6.QtCore import QDateTime, QPointF, QTimer, Qt
+from PySide6.QtCore import QDate, QDateTime, QPointF, QTimer, Qt
 from PySide6.QtGui import QColor, QPainter
 from PySide6.QtWidgets import QHeaderView, QMainWindow, QMessageBox, QTableWidgetItem, QVBoxLayout
 
+from controller.settingscontroller import SettingsController
 from models.data_simulator import SensorSimulator
-from models.sensor_data import EstadoValvula, RegistroEvento, TipoEvento
+from models.sensor_data import EstadoValvula, RegistroEvento, RegraAlerta, TipoEvento
 from ui.Ui_tela import Ui_MainWindow
 
-INTERVALO_SIMULACAO_MS = 10000
+INTERVALO_SIMULACAO_MS = 2000
 HORAS_GRAFICO_DETALHE = 1
 HORAS_GRAFICO_GERAL = 24
 PROBABILIDADE_TRIP = 0.01
@@ -39,8 +40,18 @@ class MainController(QMainWindow):
         self.tds_valores = []
         self.turbidez_valores = []
 
+        # historico completo de eventos (backing data da tabela, permite filtrar por data)
+        self.eventos = []
+
+        # regras padrao (as mesmas que ja estavam nos spinboxes)
+        self.regras = [
+            RegraAlerta(nome="TDS máximo", sensor="TDS (ppm)", valor_maximo=300.0, ativa=True),
+            RegraAlerta(nome="Turbidez máxima", sensor="Turbidez (NTU)", valor_maximo=5.0, ativa=True),
+        ]
+
         self._montar_graficos()
         self._configurar_tabela()
+        self._configurar_filtro_historico()
         self._carregar_historico_inicial()
         self._conectar_sinais()
 
@@ -57,6 +68,10 @@ class MainController(QMainWindow):
         header = self.ui.table_historico.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.ResizeToContents)
         header.setSectionResizeMode(2, QHeaderView.Stretch)
+
+    def _configurar_filtro_historico(self):
+        self.ui.date_filtro_historico.setDate(QDate.currentDate())
+        self.ui.date_filtro_historico.dateChanged.connect(self._atualizar_filtro_historico)
 
     def _criar_mini_grafico(self, titulo):
         serie = QLineSeries()
@@ -148,8 +163,21 @@ class MainController(QMainWindow):
 
     def _conectar_sinais(self):
         self.ui.btn_emergencia.clicked.connect(self.acionar_corte_emergencial)
+        self.ui.btn_abrir_valvula.clicked.connect(self.reabrir_valvula)
         self.ui.btn_conectar.clicked.connect(self.conectar_serial)
         self.ui.btn_desconectar.clicked.connect(self.desconectar_serial)
+        self.ui.btn_abrir_configuracoes.clicked.connect(self.abrir_configuracoes)
+
+    def abrir_configuracoes(self):
+        dialogo = SettingsController(self.regras, parent=self)
+        if dialogo.exec():
+            self.regras = dialogo.regras
+            for regra in self.regras:
+                if regra.sensor == "TDS (ppm)" and regra.ativa:
+                    self.ui.spin_limite_tds.setValue(regra.valor_maximo)
+                elif regra.sensor == "Turbidez (NTU)" and regra.ativa:
+                    self.ui.spin_limite_turbidez.setValue(regra.valor_maximo)
+            self._log_evento(TipoEvento.COMANDO, "Regras de alerta atualizadas via configuração.", "-")
 
     # ------------------------------------------------------------------
     # Loop de telemetria
@@ -230,9 +258,8 @@ class MainController(QMainWindow):
 
         if excedeu and not self.sobrecarga_ativa:
             self.sobrecarga_ativa = True
-            self.ui.lbl_titulo.setStyleSheet(
-                "font-size: 20px; font-weight: bold; padding: 8px; background-color: #f1c40f; color: #2b2b2b;"
-            )
+            self.ui.lbl_ultimo_evento.setStyleSheet("color: #e0a132; font-weight: bold;")
+            self.ui.lbl_ultimo_evento.setText("Limite de TDS/Turbidez excedido.")
             self._log_evento(
                 TipoEvento.ALERTA,
                 "Limite de TDS/Turbidez excedido.",
@@ -240,7 +267,8 @@ class MainController(QMainWindow):
             )
         elif not excedeu and self.sobrecarga_ativa:
             self.sobrecarga_ativa = False
-            self.ui.lbl_titulo.setStyleSheet("font-size: 20px; font-weight: bold; padding: 8px;")
+            self.ui.lbl_ultimo_evento.setStyleSheet("")
+            self.ui.lbl_ultimo_evento.setText("Leituras normalizadas.")
             self._log_evento(TipoEvento.STATUS, "Leituras normalizadas.", "-")
 
     # ------------------------------------------------------------------
@@ -262,8 +290,10 @@ class MainController(QMainWindow):
         self.ui.lbl_valvula_status.setStyleSheet(
             "background-color: #c0392b; color: white; font-weight: bold; border-radius: 4px; padding: 8px;"
         )
+        self.ui.lbl_ultimo_evento.setStyleSheet("")
         self.ui.lbl_ultimo_evento.setText(motivo)
         self._log_evento(TipoEvento.ALERTA if avisar else TipoEvento.COMANDO, motivo, valor)
+        self._atualizar_botoes_valvula()
         if avisar:
             QMessageBox.warning(self, "Proteção Ativada", motivo)
 
@@ -278,15 +308,45 @@ class MainController(QMainWindow):
         if resposta == QMessageBox.Yes:
             self._fechar_valvula("Corte de emergência acionado via software.", "-", avisar=False)
 
+    def reabrir_valvula(self):
+        resposta = QMessageBox.question(
+            self,
+            "Confirmar Reabertura",
+            "Confirma a reabertura da válvula de entrada?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+        if resposta != QMessageBox.Yes:
+            return
+        self.estado_valvula = EstadoValvula.ABERTA
+        self.ui.lbl_valvula_status.setText(f"Válvula: {EstadoValvula.ABERTA.value}")
+        self.ui.lbl_valvula_status.setStyleSheet(
+            "background-color: #2ecc71; color: white; font-weight: bold; border-radius: 4px; padding: 8px;"
+        )
+        self.ui.lbl_ultimo_evento.setStyleSheet("")
+        self.ui.lbl_ultimo_evento.setText("Válvula reaberta manualmente.")
+        self._log_evento(TipoEvento.COMANDO, "Válvula reaberta manualmente via software.", "-")
+        self._atualizar_botoes_valvula()
+
+    def _atualizar_botoes_valvula(self):
+        aberta = self.estado_valvula == EstadoValvula.ABERTA
+        self.ui.btn_emergencia.setEnabled(aberta)
+        self.ui.btn_abrir_valvula.setEnabled(not aberta)
+
     # ------------------------------------------------------------------
     # Painel serial (visual, sem conexao real ainda)
     # ------------------------------------------------------------------
     def conectar_serial(self):
         porta = self.ui.combo_porta_com.currentText()
         baud = self.ui.combo_baud_rate.currentText()
-        self.ui.lbl_status_conexao.setText(f"Status: Conectado ({porta} @ {baud})")
+        timeout = self.ui.spin_timeout.value()
+        self.ui.lbl_status_conexao.setText(f"Status: Conectado ({porta} @ {baud}, timeout {timeout}s)")
         self.ui.lbl_status_conexao.setStyleSheet("font-weight: bold; color: #27ae60;")
-        self._log_evento(TipoEvento.STATUS, f"Conexão serial estabelecida (visual) — {porta}.", f"{baud} bps")
+        self._log_evento(
+            TipoEvento.STATUS,
+            f"Conexão serial estabelecida (visual) — {porta}.",
+            f"{baud} bps, timeout {timeout}s",
+        )
 
     def desconectar_serial(self):
         self.ui.lbl_status_conexao.setText("Status: Desconectado")
@@ -298,8 +358,20 @@ class MainController(QMainWindow):
     # ------------------------------------------------------------------
     def _log_evento(self, tipo, descricao, valor):
         registro = RegistroEvento(timestamp=datetime.now(), tipo=tipo, descricao=descricao, valor_medido=valor)
+        self.eventos.append(registro)
+        if registro.timestamp.date() >= self.ui.date_filtro_historico.date().toPython():
+            self._inserir_linha_historico(registro)
+
+    def _inserir_linha_historico(self, registro):
         linha = self.ui.table_historico.rowCount()
         self.ui.table_historico.insertRow(linha)
         for coluna, texto in enumerate(registro.como_linha()):
             self.ui.table_historico.setItem(linha, coluna, QTableWidgetItem(texto))
         self.ui.table_historico.scrollToBottom()
+
+    def _atualizar_filtro_historico(self):
+        data_filtro = self.ui.date_filtro_historico.date().toPython()
+        self.ui.table_historico.setRowCount(0)
+        for registro in self.eventos:
+            if registro.timestamp.date() >= data_filtro:
+                self._inserir_linha_historico(registro)

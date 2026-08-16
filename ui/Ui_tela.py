@@ -15,11 +15,12 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QDoubleSpinBox,
-    QFormLayout, QGridLayout, QGroupBox, QHBoxLayout,
-    QHeaderView, QLCDNumber, QLabel, QMainWindow,
-    QMenuBar, QPushButton, QSizePolicy, QStatusBar,
-    QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QDateEdit,
+    QDoubleSpinBox, QFormLayout, QGridLayout, QGroupBox,
+    QHBoxLayout, QHeaderView, QLCDNumber, QLabel,
+    QMainWindow, QMenuBar, QPushButton, QSizePolicy,
+    QSpacerItem, QSpinBox, QStatusBar, QTableWidget,
+    QTableWidgetItem, QVBoxLayout, QWidget)
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -109,6 +110,13 @@ class Ui_MainWindow(object):
 
         self.layout_estado.addWidget(self.btn_emergencia)
 
+        self.btn_abrir_valvula = QPushButton(self.group_estado)
+        self.btn_abrir_valvula.setObjectName(u"btn_abrir_valvula")
+        self.btn_abrir_valvula.setEnabled(False)
+        self.btn_abrir_valvula.setMinimumSize(QSize(0, 40))
+
+        self.layout_estado.addWidget(self.btn_abrir_valvula)
+
         self.lbl_ultimo_evento = QLabel(self.group_estado)
         self.lbl_ultimo_evento.setObjectName(u"lbl_ultimo_evento")
         self.lbl_ultimo_evento.setWordWrap(True)
@@ -145,6 +153,11 @@ class Ui_MainWindow(object):
         self.spin_limite_turbidez.setValue(5.000000000000000)
 
         self.form_setpoints.setWidget(1, QFormLayout.ItemRole.FieldRole, self.spin_limite_turbidez)
+
+        self.btn_abrir_configuracoes = QPushButton(self.group_setpoints)
+        self.btn_abrir_configuracoes.setObjectName(u"btn_abrir_configuracoes")
+
+        self.form_setpoints.setWidget(2, QFormLayout.ItemRole.SpanningRole, self.btn_abrir_configuracoes)
 
 
         self.layout_linha_topo.addWidget(self.group_setpoints)
@@ -192,6 +205,26 @@ class Ui_MainWindow(object):
         self.group_historico.setObjectName(u"group_historico")
         self.layout_historico = QVBoxLayout(self.group_historico)
         self.layout_historico.setObjectName(u"layout_historico")
+        self.layout_filtro_historico = QHBoxLayout()
+        self.layout_filtro_historico.setObjectName(u"layout_filtro_historico")
+        self.lbl_filtro_historico = QLabel(self.group_historico)
+        self.lbl_filtro_historico.setObjectName(u"lbl_filtro_historico")
+
+        self.layout_filtro_historico.addWidget(self.lbl_filtro_historico)
+
+        self.date_filtro_historico = QDateEdit(self.group_historico)
+        self.date_filtro_historico.setObjectName(u"date_filtro_historico")
+        self.date_filtro_historico.setCalendarPopup(True)
+
+        self.layout_filtro_historico.addWidget(self.date_filtro_historico)
+
+        self.spacer_filtro_historico = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.layout_filtro_historico.addItem(self.spacer_filtro_historico)
+
+
+        self.layout_historico.addLayout(self.layout_filtro_historico)
+
         self.table_historico = QTableWidget(self.group_historico)
         if (self.table_historico.columnCount() < 4):
             self.table_historico.setColumnCount(4)
@@ -243,6 +276,19 @@ class Ui_MainWindow(object):
 
         self.layout_serial.addWidget(self.combo_baud_rate)
 
+        self.lbl_timeout = QLabel(self.group_serial)
+        self.lbl_timeout.setObjectName(u"lbl_timeout")
+
+        self.layout_serial.addWidget(self.lbl_timeout)
+
+        self.spin_timeout = QSpinBox(self.group_serial)
+        self.spin_timeout.setObjectName(u"spin_timeout")
+        self.spin_timeout.setMinimum(1)
+        self.spin_timeout.setMaximum(30)
+        self.spin_timeout.setValue(5)
+
+        self.layout_serial.addWidget(self.spin_timeout)
+
         self.btn_conectar = QPushButton(self.group_serial)
         self.btn_conectar.setObjectName(u"btn_conectar")
 
@@ -287,12 +333,16 @@ class Ui_MainWindow(object):
         self.group_estado.setTitle(QCoreApplication.translate("MainWindow", u"Estado da V\u00e1lvula", None))
         self.lbl_valvula_status.setText(QCoreApplication.translate("MainWindow", u"V\u00e1lvula: ABERTA / NORMAL", None))
         self.btn_emergencia.setText(QCoreApplication.translate("MainWindow", u"CORTE EMERGENCIAL \u2014 FECHAR V\u00c1LVULA", None))
+        self.btn_abrir_valvula.setText(QCoreApplication.translate("MainWindow", u"REABRIR V\u00c1LVULA", None))
         self.lbl_ultimo_evento.setText(QCoreApplication.translate("MainWindow", u"Nenhum evento registrado ainda.", None))
         self.group_setpoints.setTitle(QCoreApplication.translate("MainWindow", u"Limites de Alerta", None))
         self.lbl_limite_tds.setText(QCoreApplication.translate("MainWindow", u"Limite TDS (ppm)", None))
         self.lbl_limite_turbidez.setText(QCoreApplication.translate("MainWindow", u"Limite Turbidez (NTU)", None))
+        self.btn_abrir_configuracoes.setText(QCoreApplication.translate("MainWindow", u"Configurar Regras de Alerta...", None))
         self.group_grafico.setTitle(QCoreApplication.translate("MainWindow", u"Tend\u00eancia", None))
         self.group_historico.setTitle(QCoreApplication.translate("MainWindow", u"Hist\u00f3rico de Eventos", None))
+        self.lbl_filtro_historico.setText(QCoreApplication.translate("MainWindow", u"Mostrar eventos a partir de:", None))
+        self.date_filtro_historico.setDisplayFormat(QCoreApplication.translate("MainWindow", u"dd/MM/yyyy", None))
         ___qtablewidgetitem = self.table_historico.horizontalHeaderItem(0)
         ___qtablewidgetitem.setText(QCoreApplication.translate("MainWindow", u"Data / Hora", None))
         ___qtablewidgetitem1 = self.table_historico.horizontalHeaderItem(1)
@@ -311,6 +361,7 @@ class Ui_MainWindow(object):
         self.combo_baud_rate.setItemText(0, QCoreApplication.translate("MainWindow", u"9600", None))
         self.combo_baud_rate.setItemText(1, QCoreApplication.translate("MainWindow", u"115200", None))
 
+        self.lbl_timeout.setText(QCoreApplication.translate("MainWindow", u"Timeout (s):", None))
         self.btn_conectar.setText(QCoreApplication.translate("MainWindow", u"Conectar", None))
         self.btn_desconectar.setText(QCoreApplication.translate("MainWindow", u"Desconectar", None))
         self.lbl_status_conexao.setText(QCoreApplication.translate("MainWindow", u"Status: Desconectado", None))

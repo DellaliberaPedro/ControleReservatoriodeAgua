@@ -30,6 +30,15 @@ class LeituraTelemetria:
 
 
 @dataclass
+class RegraAlerta:
+    """Regra de limite configuravel pelo operador (setpoint)."""
+    nome: str
+    sensor: str  # "TDS (ppm)" ou "Turbidez (NTU)"
+    valor_maximo: float
+    ativa: bool = True
+
+
+@dataclass
 class RegistroEvento:
     timestamp: datetime
     tipo: TipoEvento

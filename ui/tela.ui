@@ -141,6 +141,22 @@
           </widget>
          </item>
          <item>
+          <widget class="QPushButton" name="btn_abrir_valvula">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <property name="text">
+            <string>REABRIR VÁLVULA</string>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>40</height>
+            </size>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QLabel" name="lbl_ultimo_evento">
            <property name="text">
             <string>Nenhum evento registrado ainda.</string>
@@ -191,6 +207,13 @@
            </property>
            <property name="value">
             <double>5.000000000000000</double>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0" colspan="2">
+          <widget class="QPushButton" name="btn_abrir_configuracoes">
+           <property name="text">
+            <string>Configurar Regras de Alerta...</string>
            </property>
           </widget>
          </item>
@@ -261,6 +284,40 @@
        <string>Histórico de Eventos</string>
       </property>
       <layout class="QVBoxLayout" name="layout_historico">
+       <item>
+        <layout class="QHBoxLayout" name="layout_filtro_historico">
+         <item>
+          <widget class="QLabel" name="lbl_filtro_historico">
+           <property name="text">
+            <string>Mostrar eventos a partir de:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QDateEdit" name="date_filtro_historico">
+           <property name="calendarPopup">
+            <bool>true</bool>
+           </property>
+           <property name="displayFormat">
+            <string>dd/MM/yyyy</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="spacer_filtro_historico">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+        </layout>
+       </item>
        <item>
         <widget class="QTableWidget" name="table_historico">
          <property name="alternatingRowColors">
@@ -352,6 +409,26 @@
            <string>115200</string>
           </property>
          </item>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="lbl_timeout">
+         <property name="text">
+          <string>Timeout (s):</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QSpinBox" name="spin_timeout">
+         <property name="minimum">
+          <number>1</number>
+         </property>
+         <property name="maximum">
+          <number>30</number>
+         </property>
+         <property name="value">
+          <number>5</number>
+         </property>
         </widget>
        </item>
        <item>
