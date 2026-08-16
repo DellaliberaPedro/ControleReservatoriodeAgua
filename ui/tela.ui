@@ -13,7 +13,61 @@
   <property name="windowTitle">
    <string>Controle de Reservatório de Água</string>
   </property>
-  <widget class="QWidget" name="centralwidget"/>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="layout_principal">
+    <item>
+     <widget class="QGroupBox" name="group_telemetria">
+      <property name="title">
+       <string>Telemetria</string>
+      </property>
+      <layout class="QGridLayout" name="grid_telemetria">
+       <item row="0" column="0">
+        <widget class="QLabel" name="lbl_temperatura">
+         <property name="text">
+          <string>Temperatura (°C)</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QLCDNumber" name="lcd_temperatura">
+         <property name="digitCount">
+          <number>5</number>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="lbl_tds">
+         <property name="text">
+          <string>TDS (ppm)</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QLCDNumber" name="lcd_tds">
+         <property name="digitCount">
+          <number>5</number>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="lbl_turbidez">
+         <property name="text">
+          <string>Turbidez (NTU)</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QLCDNumber" name="lcd_turbidez">
+         <property name="digitCount">
+          <number>5</number>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+   </layout>
+  </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
     <rect>
@@ -29,4 +83,3 @@
  <resources/>
  <connections/>
 </ui>
- 
