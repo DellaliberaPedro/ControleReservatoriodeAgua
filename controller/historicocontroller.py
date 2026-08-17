@@ -1,6 +1,5 @@
 """
 Controller da tela (QDialog) de Histórico de Eventos.
-
 Recebe a lista viva de eventos do MainController (mesma referência de
 lista, não uma cópia) e mostra numa tabela filtrável por data. Enquanto
 a janela estiver aberta, um timer interno reconsulta essa lista a cada
@@ -15,13 +14,34 @@ INTERVALO_ATUALIZACAO_MS = 2000
 
 
 class HistoricoController(QDialog):
+    """
+    Janela modal que exibe o histórico de eventos do sistema
+    (cortes de emergência, ultrapassagem de limites, trocas de estado
+    do disjuntor) em uma tabela filtrável por data.
+
+    A lista de eventos é recebida por referência do MainController,
+    então qualquer evento novo registrado lá é refletido aqui
+    automaticamente através do timer de atualização periódica.
+    """
+
     def __init__(self, eventos, parent=None):
+        """
+        Inicializa o diálogo de histórico.
+
+        Args:
+            eventos: lista viva de eventos (mesma referência usada pelo
+                MainController — não é copiada, então mudanças externas
+                aparecem aqui sem precisar recriar o diálogo).
+            parent: widget pai do diálogo (padrão do Qt).
+        """
         super().__init__(parent)
         self.ui = Ui_HistoricoDialog()
         self.ui.setupUi(self)
-
         self.eventos = eventos  # referencia a lista viva do MainController
 
+        # ajusta as colunas da tabela: largura pelo conteúdo, exceto a
+        # coluna de descrição (índice 2), que se estica para ocupar
+        # o espaço restante
         header = self.ui.table_historico.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.ResizeToContents)
         header.setSectionResizeMode(2, QHeaderView.Stretch)
@@ -40,6 +60,14 @@ class HistoricoController(QDialog):
         self.timer.start(INTERVALO_ATUALIZACAO_MS)
 
     def _atualizar_tabela(self):
+        """
+        Repopula a tabela com os eventos cuja data seja igual ou
+        posterior à data selecionada no filtro.
+
+        Preserva a posição de rolagem quando o usuário tem uma linha
+        selecionada; caso contrário, rola automaticamente até o final
+        para mostrar o evento mais recente.
+        """
         data_filtro = self.ui.date_filtro_historico.date().toPython()
         linha_selecionada = self.ui.table_historico.currentRow()
 
