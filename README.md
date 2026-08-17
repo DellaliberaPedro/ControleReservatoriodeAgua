@@ -96,5 +96,57 @@ Thumbs.db
 
 - Pedro Henrique Devens Dellalibera
 - João Gabriel Trevizol
+<<<<<<< Updated upstream
 - Alan Hoffmann dos Santos
 - Diogo Hoffmann do Prado
+=======
+- Alan Hoffman dos Santos
+- Diogo Hoffman
+
+## 💻 Linguagens e Tecnologias
+
+<p align="center">
+
+![Python](https://img.shields.io/badge/Python-3.14-3776AB?logo=python&logoColor=white)
+![PySide6](https://img.shields.io/badge/PySide6-6.x-41CD52?logo=qt&logoColor=white)
+![STM32](https://img.shields.io/badge/STM32F103C8T6-Blue%20Pill-03234B?logo=stmicroelectronics&logoColor=white)
+
+</p>
+
+### 🧑‍💻 Linguagens de programação
+
+| Linguagem     |     Versão | Utilização                           |
+| ------------- | ---------: | ------------------------------------ |
+| 🐍 **Python** |   **3.14** | Desenvolvimento da aplicação desktop |
+| ⚙️ **C**      |    A definir | Firmware e programação do STM32      |
+| 🎨 **QSS**    | **Qt 6.x** | Estilização da interface gráfica     |
+
+### 🖥️ Frameworks e bibliotecas
+
+| Tecnologia      |  Versão | Utilização                           |
+| --------------- | ------: | ------------------------------------ |
+| **PySide6**     | **6.x** | Desenvolvimento da interface gráfica |
+| **Qt**          | **6.x** | Framework da aplicação desktop       |
+| **Qt Designer** | **6.x** | Criação das interfaces `.ui`         |
+
+### 🔌 Hardware e firmware
+
+| Tecnologia             | Versão / Modelo | Utilização                               |
+| ---------------------- | --------------: | ---------------------------------------- |
+| **STM32F103C8T6**      |       Blue Pill | Microcontrolador principal               |
+| **STM32CubeIDE**       |         **2.x** | Desenvolvimento e compilação do firmware |
+| **DS18B20**            |               — | Sensor de temperatura                    |
+| **Sensor TDS**         |               — | Medição de condutividade/TDS             |
+| **Sensor de Turbidez** |               — | Medição da turbidez da água              |
+
+### 🛠️ Ferramentas de desenvolvimento
+
+| Ferramenta             |  Versão | Utilização                     |
+| ---------------------- | ------: | ------------------------------ |
+| **Git**                | **2.x** | Controle de versão             |
+| **GitHub**             |       — | Hospedagem do código-fonte     |
+| **Visual Studio Code** | **1.x** | Editor de código               |
+| **Qt Designer**        | **6.x** | Desenvolvimento das interfaces |
+
+> 📌 **Observação:** as versões indicadas correspondem às versões utilizadas ou previstas durante o desenvolvimento do projeto e podem ser atualizadas conforme a evolução da aplicação.
+>>>>>>> Stashed changes
