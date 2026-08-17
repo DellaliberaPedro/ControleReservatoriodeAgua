@@ -9,10 +9,11 @@ regra de negócio, só o desenho.
 from datetime import datetime, timedelta
 
 from PySide6.QtCharts import QChart, QChartView, QDateTimeAxis, QLineSeries, QValueAxis
-from PySide6.QtCore import QDate, QDateTime, QPointF, QTimer, Qt
+from PySide6.QtCore import QDateTime, QPointF, QTimer, Qt
 from PySide6.QtGui import QColor, QPainter
-from PySide6.QtWidgets import QHeaderView, QMainWindow, QMessageBox, QTableWidgetItem, QVBoxLayout
+from PySide6.QtWidgets import QGraphicsView, QMainWindow, QMessageBox, QVBoxLayout
 
+from controller.historicocontroller import HistoricoController
 from controller.settingscontroller import SettingsController
 from models.data_simulator import SensorSimulator
 from models.sensor_data import EstadoValvula, RegistroEvento, RegraAlerta, TipoEvento
@@ -50,8 +51,6 @@ class MainController(QMainWindow):
         ]
 
         self._montar_graficos()
-        self._configurar_tabela()
-        self._configurar_filtro_historico()
         self._carregar_historico_inicial()
         self._conectar_sinais()
 
@@ -64,20 +63,12 @@ class MainController(QMainWindow):
     # ------------------------------------------------------------------
     # Setup
     # ------------------------------------------------------------------
-    def _configurar_tabela(self):
-        header = self.ui.table_historico.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(2, QHeaderView.Stretch)
-
-    def _configurar_filtro_historico(self):
-        self.ui.date_filtro_historico.setDate(QDate.currentDate())
-        self.ui.date_filtro_historico.dateChanged.connect(self._atualizar_filtro_historico)
-
     def _criar_mini_grafico(self, titulo):
         serie = QLineSeries()
 
         chart = QChart()
         chart.setTheme(QChart.ChartThemeDark)
+        chart.setAnimationOptions(QChart.NoAnimation)
         chart.setBackgroundBrush(QColor("#333333"))
         chart.setTitleBrush(QColor("#d4d4d4"))
         chart.setTitle(titulo)
@@ -99,9 +90,14 @@ class MainController(QMainWindow):
     def _exibir_grafico(self, container, chart):
         chart_view = QChartView(chart)
         chart_view.setRenderHint(QPainter.Antialiasing)
+        # forca redesenho completo do viewport a cada atualizacao: sem isso, em alguns
+        # ambientes Windows o QChartView so repinta a regiao "suja" e a linha antiga
+        # some/fica parcial quando os pontos mudam rapido (a cada 2s).
+        chart_view.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
         layout = QVBoxLayout(container)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(chart_view)
+        return chart_view
 
     def _montar_graficos(self):
         self.chart_temp, self.serie_temperatura, self.eixo_x_temp, self.eixo_y_temp = self._criar_mini_grafico(
@@ -114,9 +110,9 @@ class MainController(QMainWindow):
             self._criar_mini_grafico("Turbidez (NTU) — última 1h")
         )
 
-        self._exibir_grafico(self.ui.chart_temperatura, self.chart_temp)
-        self._exibir_grafico(self.ui.chart_tds, self.chart_tds)
-        self._exibir_grafico(self.ui.chart_turbidez, self.chart_turbidez)
+        self.view_temp = self._exibir_grafico(self.ui.chart_temperatura, self.chart_temp)
+        self.view_tds = self._exibir_grafico(self.ui.chart_tds, self.chart_tds)
+        self.view_turbidez = self._exibir_grafico(self.ui.chart_turbidez, self.chart_turbidez)
 
         # grafico geral, com os 3 sensores juntos e as 24h completas
         self.serie_geral_temperatura = QLineSeries()
@@ -128,6 +124,7 @@ class MainController(QMainWindow):
 
         self.chart_geral = QChart()
         self.chart_geral.setTheme(QChart.ChartThemeDark)
+        self.chart_geral.setAnimationOptions(QChart.NoAnimation)
         self.chart_geral.setBackgroundBrush(QColor("#333333"))
         self.chart_geral.setTitleBrush(QColor("#d4d4d4"))
         self.chart_geral.setTitle("Visão Geral — últimas 24h")
@@ -148,7 +145,7 @@ class MainController(QMainWindow):
             serie.attachAxis(self.eixo_x_geral)
             serie.attachAxis(self.eixo_y_geral)
 
-        self._exibir_grafico(self.ui.chart_geral, self.chart_geral)
+        self.view_geral = self._exibir_grafico(self.ui.chart_geral, self.chart_geral)
 
     def _carregar_historico_inicial(self):
         historico = self.simulador.gerar_historico(horas=24, intervalo_min=10)
@@ -167,6 +164,7 @@ class MainController(QMainWindow):
         self.ui.btn_conectar.clicked.connect(self.conectar_serial)
         self.ui.btn_desconectar.clicked.connect(self.desconectar_serial)
         self.ui.btn_abrir_configuracoes.clicked.connect(self.abrir_configuracoes)
+        self.ui.btn_abrir_historico.clicked.connect(self.abrir_historico)
 
     def abrir_configuracoes(self):
         dialogo = SettingsController(self.regras, parent=self)
@@ -178,6 +176,10 @@ class MainController(QMainWindow):
                 elif regra.sensor == "Turbidez (NTU)" and regra.ativa:
                     self.ui.spin_limite_turbidez.setValue(regra.valor_maximo)
             self._log_evento(TipoEvento.COMANDO, "Regras de alerta atualizadas via configuração.", "-")
+
+    def abrir_historico(self):
+        dialogo = HistoricoController(self.eventos, parent=self)
+        dialogo.exec()
 
     # ------------------------------------------------------------------
     # Loop de telemetria
@@ -247,6 +249,10 @@ class MainController(QMainWindow):
         )
         maior = max(max(v for _, v in pares_tds), max(v for _, v in pares_turbidez), max(v for _, v in pares_temp))
         self.eixo_y_geral.setRange(0, maior * 1.1)
+
+        for view in (self.view_temp, self.view_tds, self.view_turbidez, self.view_geral):
+            view.scene().invalidate(view.scene().sceneRect())
+            view.viewport().repaint()
 
     # ------------------------------------------------------------------
     # Setpoints
@@ -359,19 +365,3 @@ class MainController(QMainWindow):
     def _log_evento(self, tipo, descricao, valor):
         registro = RegistroEvento(timestamp=datetime.now(), tipo=tipo, descricao=descricao, valor_medido=valor)
         self.eventos.append(registro)
-        if registro.timestamp.date() >= self.ui.date_filtro_historico.date().toPython():
-            self._inserir_linha_historico(registro)
-
-    def _inserir_linha_historico(self, registro):
-        linha = self.ui.table_historico.rowCount()
-        self.ui.table_historico.insertRow(linha)
-        for coluna, texto in enumerate(registro.como_linha()):
-            self.ui.table_historico.setItem(linha, coluna, QTableWidgetItem(texto))
-        self.ui.table_historico.scrollToBottom()
-
-    def _atualizar_filtro_historico(self):
-        data_filtro = self.ui.date_filtro_historico.date().toPython()
-        self.ui.table_historico.setRowCount(0)
-        for registro in self.eventos:
-            if registro.timestamp.date() >= data_filtro:
-                self._inserir_linha_historico(registro)

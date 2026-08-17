@@ -10,6 +10,12 @@
     <height>860</height>
    </rect>
   </property>
+  <property name="minimumSize">
+   <size>
+    <width>1080</width>
+    <height>780</height>
+   </size>
+  </property>
   <property name="windowTitle">
    <string>Controle de Reservatório de Água</string>
   </property>
@@ -283,28 +289,115 @@
       <property name="title">
        <string>Histórico de Eventos</string>
       </property>
-      <layout class="QVBoxLayout" name="layout_historico">
+      <layout class="QHBoxLayout" name="layout_historico">
        <item>
-        <layout class="QHBoxLayout" name="layout_filtro_historico">
+        <widget class="QLabel" name="lbl_resumo_historico">
+         <property name="text">
+          <string>Comandos, alertas e mudanças de estado registrados durante a sessão.</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="spacer_historico">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btn_abrir_historico">
+         <property name="text">
+          <string>Abrir Histórico de Eventos...</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+
+    <item>
+     <widget class="QGroupBox" name="group_serial">
+      <property name="title">
+       <string>Comunicação Serial</string>
+      </property>
+      <layout class="QVBoxLayout" name="layout_serial">
+       <item>
+        <layout class="QHBoxLayout" name="layout_serial_config">
          <item>
-          <widget class="QLabel" name="lbl_filtro_historico">
+          <widget class="QLabel" name="lbl_porta_com">
            <property name="text">
-            <string>Mostrar eventos a partir de:</string>
+            <string>Porta COM:</string>
            </property>
           </widget>
          </item>
          <item>
-          <widget class="QDateEdit" name="date_filtro_historico">
-           <property name="calendarPopup">
-            <bool>true</bool>
-           </property>
-           <property name="displayFormat">
-            <string>dd/MM/yyyy</string>
+          <widget class="QComboBox" name="combo_porta_com">
+           <item>
+            <property name="text">
+             <string>COM1</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>COM3</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>COM5</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="lbl_baud_rate">
+           <property name="text">
+            <string>Baud Rate:</string>
            </property>
           </widget>
          </item>
          <item>
-          <spacer name="spacer_filtro_historico">
+          <widget class="QComboBox" name="combo_baud_rate">
+           <item>
+            <property name="text">
+             <string>9600</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>115200</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="lbl_timeout">
+           <property name="text">
+            <string>Timeout (s):</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QSpinBox" name="spin_timeout">
+           <property name="minimum">
+            <number>1</number>
+           </property>
+           <property name="maximum">
+            <number>30</number>
+           </property>
+           <property name="value">
+            <number>5</number>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="spacer_serial_config">
            <property name="orientation">
             <enum>Qt::Horizontal</enum>
            </property>
@@ -319,141 +412,32 @@
         </layout>
        </item>
        <item>
-        <widget class="QTableWidget" name="table_historico">
-         <property name="alternatingRowColors">
-          <bool>true</bool>
-         </property>
-         <property name="columnCount">
-          <number>4</number>
-         </property>
-         <property name="editTriggers">
-          <set>QAbstractItemView::NoEditTriggers</set>
-         </property>
-         <property name="selectionBehavior">
-          <enum>QAbstractItemView::SelectRows</enum>
-         </property>
-         <column>
-          <property name="text">
-           <string>Data / Hora</string>
-          </property>
-         </column>
-         <column>
-          <property name="text">
-           <string>Tipo</string>
-          </property>
-         </column>
-         <column>
-          <property name="text">
-           <string>Descrição</string>
-          </property>
-         </column>
-         <column>
-          <property name="text">
-           <string>Valor Medido</string>
-          </property>
-         </column>
-        </widget>
-       </item>
-      </layout>
-     </widget>
-    </item>
-
-    <item>
-     <widget class="QGroupBox" name="group_serial">
-      <property name="title">
-       <string>Comunicação Serial</string>
-      </property>
-      <layout class="QHBoxLayout" name="layout_serial">
-       <item>
-        <widget class="QLabel" name="lbl_porta_com">
-         <property name="text">
-          <string>Porta COM:</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QComboBox" name="combo_porta_com">
+        <layout class="QHBoxLayout" name="layout_serial_acoes">
          <item>
-          <property name="text">
-           <string>COM1</string>
-          </property>
+          <widget class="QPushButton" name="btn_conectar">
+           <property name="text">
+            <string>Conectar</string>
+           </property>
+          </widget>
          </item>
          <item>
-          <property name="text">
-           <string>COM3</string>
-          </property>
+          <widget class="QPushButton" name="btn_desconectar">
+           <property name="text">
+            <string>Desconectar</string>
+           </property>
+          </widget>
          </item>
          <item>
-          <property name="text">
-           <string>COM5</string>
-          </property>
+          <widget class="QLabel" name="lbl_status_conexao">
+           <property name="text">
+            <string>Status: Desconectado</string>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">font-weight: bold; color: #c0392b;</string>
+           </property>
+          </widget>
          </item>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLabel" name="lbl_baud_rate">
-         <property name="text">
-          <string>Baud Rate:</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QComboBox" name="combo_baud_rate">
-         <item>
-          <property name="text">
-           <string>9600</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>115200</string>
-          </property>
-         </item>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLabel" name="lbl_timeout">
-         <property name="text">
-          <string>Timeout (s):</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QSpinBox" name="spin_timeout">
-         <property name="minimum">
-          <number>1</number>
-         </property>
-         <property name="maximum">
-          <number>30</number>
-         </property>
-         <property name="value">
-          <number>5</number>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="btn_conectar">
-         <property name="text">
-          <string>Conectar</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="btn_desconectar">
-         <property name="text">
-          <string>Desconectar</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLabel" name="lbl_status_conexao">
-         <property name="text">
-          <string>Status: Desconectado</string>
-         </property>
-         <property name="styleSheet">
-          <string notr="true">font-weight: bold; color: #c0392b;</string>
-         </property>
-        </widget>
+        </layout>
        </item>
       </layout>
      </widget>

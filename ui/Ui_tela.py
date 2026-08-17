@@ -15,18 +15,18 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QDateEdit,
-    QDoubleSpinBox, QFormLayout, QGridLayout, QGroupBox,
-    QHBoxLayout, QHeaderView, QLCDNumber, QLabel,
-    QMainWindow, QMenuBar, QPushButton, QSizePolicy,
-    QSpacerItem, QSpinBox, QStatusBar, QTableWidget,
-    QTableWidgetItem, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QComboBox, QDoubleSpinBox, QFormLayout,
+    QGridLayout, QGroupBox, QHBoxLayout, QLCDNumber,
+    QLabel, QMainWindow, QMenuBar, QPushButton,
+    QSizePolicy, QSpacerItem, QSpinBox, QStatusBar,
+    QVBoxLayout, QWidget)
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
         MainWindow.resize(1180, 860)
+        MainWindow.setMinimumSize(QSize(1080, 780))
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.layout_principal = QVBoxLayout(self.centralwidget)
@@ -203,58 +203,35 @@ class Ui_MainWindow(object):
 
         self.group_historico = QGroupBox(self.centralwidget)
         self.group_historico.setObjectName(u"group_historico")
-        self.layout_historico = QVBoxLayout(self.group_historico)
+        self.layout_historico = QHBoxLayout(self.group_historico)
         self.layout_historico.setObjectName(u"layout_historico")
-        self.layout_filtro_historico = QHBoxLayout()
-        self.layout_filtro_historico.setObjectName(u"layout_filtro_historico")
-        self.lbl_filtro_historico = QLabel(self.group_historico)
-        self.lbl_filtro_historico.setObjectName(u"lbl_filtro_historico")
+        self.lbl_resumo_historico = QLabel(self.group_historico)
+        self.lbl_resumo_historico.setObjectName(u"lbl_resumo_historico")
 
-        self.layout_filtro_historico.addWidget(self.lbl_filtro_historico)
+        self.layout_historico.addWidget(self.lbl_resumo_historico)
 
-        self.date_filtro_historico = QDateEdit(self.group_historico)
-        self.date_filtro_historico.setObjectName(u"date_filtro_historico")
-        self.date_filtro_historico.setCalendarPopup(True)
+        self.spacer_historico = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
-        self.layout_filtro_historico.addWidget(self.date_filtro_historico)
+        self.layout_historico.addItem(self.spacer_historico)
 
-        self.spacer_filtro_historico = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        self.btn_abrir_historico = QPushButton(self.group_historico)
+        self.btn_abrir_historico.setObjectName(u"btn_abrir_historico")
 
-        self.layout_filtro_historico.addItem(self.spacer_filtro_historico)
-
-
-        self.layout_historico.addLayout(self.layout_filtro_historico)
-
-        self.table_historico = QTableWidget(self.group_historico)
-        if (self.table_historico.columnCount() < 4):
-            self.table_historico.setColumnCount(4)
-        __qtablewidgetitem = QTableWidgetItem()
-        self.table_historico.setHorizontalHeaderItem(0, __qtablewidgetitem)
-        __qtablewidgetitem1 = QTableWidgetItem()
-        self.table_historico.setHorizontalHeaderItem(1, __qtablewidgetitem1)
-        __qtablewidgetitem2 = QTableWidgetItem()
-        self.table_historico.setHorizontalHeaderItem(2, __qtablewidgetitem2)
-        __qtablewidgetitem3 = QTableWidgetItem()
-        self.table_historico.setHorizontalHeaderItem(3, __qtablewidgetitem3)
-        self.table_historico.setObjectName(u"table_historico")
-        self.table_historico.setAlternatingRowColors(True)
-        self.table_historico.setColumnCount(4)
-        self.table_historico.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        self.table_historico.setSelectionBehavior(QAbstractItemView.SelectRows)
-
-        self.layout_historico.addWidget(self.table_historico)
+        self.layout_historico.addWidget(self.btn_abrir_historico)
 
 
         self.layout_principal.addWidget(self.group_historico)
 
         self.group_serial = QGroupBox(self.centralwidget)
         self.group_serial.setObjectName(u"group_serial")
-        self.layout_serial = QHBoxLayout(self.group_serial)
+        self.layout_serial = QVBoxLayout(self.group_serial)
         self.layout_serial.setObjectName(u"layout_serial")
+        self.layout_serial_config = QHBoxLayout()
+        self.layout_serial_config.setObjectName(u"layout_serial_config")
         self.lbl_porta_com = QLabel(self.group_serial)
         self.lbl_porta_com.setObjectName(u"lbl_porta_com")
 
-        self.layout_serial.addWidget(self.lbl_porta_com)
+        self.layout_serial_config.addWidget(self.lbl_porta_com)
 
         self.combo_porta_com = QComboBox(self.group_serial)
         self.combo_porta_com.addItem("")
@@ -262,24 +239,24 @@ class Ui_MainWindow(object):
         self.combo_porta_com.addItem("")
         self.combo_porta_com.setObjectName(u"combo_porta_com")
 
-        self.layout_serial.addWidget(self.combo_porta_com)
+        self.layout_serial_config.addWidget(self.combo_porta_com)
 
         self.lbl_baud_rate = QLabel(self.group_serial)
         self.lbl_baud_rate.setObjectName(u"lbl_baud_rate")
 
-        self.layout_serial.addWidget(self.lbl_baud_rate)
+        self.layout_serial_config.addWidget(self.lbl_baud_rate)
 
         self.combo_baud_rate = QComboBox(self.group_serial)
         self.combo_baud_rate.addItem("")
         self.combo_baud_rate.addItem("")
         self.combo_baud_rate.setObjectName(u"combo_baud_rate")
 
-        self.layout_serial.addWidget(self.combo_baud_rate)
+        self.layout_serial_config.addWidget(self.combo_baud_rate)
 
         self.lbl_timeout = QLabel(self.group_serial)
         self.lbl_timeout.setObjectName(u"lbl_timeout")
 
-        self.layout_serial.addWidget(self.lbl_timeout)
+        self.layout_serial_config.addWidget(self.lbl_timeout)
 
         self.spin_timeout = QSpinBox(self.group_serial)
         self.spin_timeout.setObjectName(u"spin_timeout")
@@ -287,23 +264,35 @@ class Ui_MainWindow(object):
         self.spin_timeout.setMaximum(30)
         self.spin_timeout.setValue(5)
 
-        self.layout_serial.addWidget(self.spin_timeout)
+        self.layout_serial_config.addWidget(self.spin_timeout)
 
+        self.spacer_serial_config = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.layout_serial_config.addItem(self.spacer_serial_config)
+
+
+        self.layout_serial.addLayout(self.layout_serial_config)
+
+        self.layout_serial_acoes = QHBoxLayout()
+        self.layout_serial_acoes.setObjectName(u"layout_serial_acoes")
         self.btn_conectar = QPushButton(self.group_serial)
         self.btn_conectar.setObjectName(u"btn_conectar")
 
-        self.layout_serial.addWidget(self.btn_conectar)
+        self.layout_serial_acoes.addWidget(self.btn_conectar)
 
         self.btn_desconectar = QPushButton(self.group_serial)
         self.btn_desconectar.setObjectName(u"btn_desconectar")
 
-        self.layout_serial.addWidget(self.btn_desconectar)
+        self.layout_serial_acoes.addWidget(self.btn_desconectar)
 
         self.lbl_status_conexao = QLabel(self.group_serial)
         self.lbl_status_conexao.setObjectName(u"lbl_status_conexao")
         self.lbl_status_conexao.setStyleSheet(u"font-weight: bold; color: #c0392b;")
 
-        self.layout_serial.addWidget(self.lbl_status_conexao)
+        self.layout_serial_acoes.addWidget(self.lbl_status_conexao)
+
+
+        self.layout_serial.addLayout(self.layout_serial_acoes)
 
 
         self.layout_principal.addWidget(self.group_serial)
@@ -341,16 +330,8 @@ class Ui_MainWindow(object):
         self.btn_abrir_configuracoes.setText(QCoreApplication.translate("MainWindow", u"Configurar Regras de Alerta...", None))
         self.group_grafico.setTitle(QCoreApplication.translate("MainWindow", u"Tend\u00eancia", None))
         self.group_historico.setTitle(QCoreApplication.translate("MainWindow", u"Hist\u00f3rico de Eventos", None))
-        self.lbl_filtro_historico.setText(QCoreApplication.translate("MainWindow", u"Mostrar eventos a partir de:", None))
-        self.date_filtro_historico.setDisplayFormat(QCoreApplication.translate("MainWindow", u"dd/MM/yyyy", None))
-        ___qtablewidgetitem = self.table_historico.horizontalHeaderItem(0)
-        ___qtablewidgetitem.setText(QCoreApplication.translate("MainWindow", u"Data / Hora", None))
-        ___qtablewidgetitem1 = self.table_historico.horizontalHeaderItem(1)
-        ___qtablewidgetitem1.setText(QCoreApplication.translate("MainWindow", u"Tipo", None))
-        ___qtablewidgetitem2 = self.table_historico.horizontalHeaderItem(2)
-        ___qtablewidgetitem2.setText(QCoreApplication.translate("MainWindow", u"Descri\u00e7\u00e3o", None))
-        ___qtablewidgetitem3 = self.table_historico.horizontalHeaderItem(3)
-        ___qtablewidgetitem3.setText(QCoreApplication.translate("MainWindow", u"Valor Medido", None))
+        self.lbl_resumo_historico.setText(QCoreApplication.translate("MainWindow", u"Comandos, alertas e mudan\u00e7as de estado registrados durante a sess\u00e3o.", None))
+        self.btn_abrir_historico.setText(QCoreApplication.translate("MainWindow", u"Abrir Hist\u00f3rico de Eventos...", None))
         self.group_serial.setTitle(QCoreApplication.translate("MainWindow", u"Comunica\u00e7\u00e3o Serial", None))
         self.lbl_porta_com.setText(QCoreApplication.translate("MainWindow", u"Porta COM:", None))
         self.combo_porta_com.setItemText(0, QCoreApplication.translate("MainWindow", u"COM1", None))
