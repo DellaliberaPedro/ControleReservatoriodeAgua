@@ -96,12 +96,8 @@ Thumbs.db
 
 - Pedro Henrique Devens Dellalibera
 - João Gabriel Trevizol
-<<<<<<< Updated upstream
 - Alan Hoffmann dos Santos
 - Diogo Hoffmann do Prado
-=======
-- Alan Hoffman dos Santos
-- Diogo Hoffman
 
 ## 💻 Linguagens e Tecnologias
 
