@@ -108,7 +108,7 @@ Thumbs.db
 <p align="center">
 
 ![Python](https://img.shields.io/badge/Python-3.14-3776AB?logo=python&logoColor=white)
-![PySide6](https://img.shields.io/badge/PySide6-6.x-41CD52?logo=qt&logoColor=white)
+![PySide6](https://img.shields.io/badge/PySide6-6.11.1-41CD52?logo=qt&logoColor=white)
 ![STM32](https://img.shields.io/badge/STM32F103C8T6-Blue%20Pill-03234B?logo=stmicroelectronics&logoColor=white)
 
 </p>
