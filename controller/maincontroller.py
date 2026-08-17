@@ -160,6 +160,10 @@ class MainController(QMainWindow):
 
     def _conectar_sinais(self):
         self.ui.btn_emergencia.clicked.connect(self.acionar_corte_emergencial)
+        
+        # ---> ATALHO DE TECLADO ADICIONADO AQUI <---
+        self.ui.btn_emergencia.setShortcut("Space")
+        
         self.ui.btn_abrir_valvula.clicked.connect(self.reabrir_valvula)
         self.ui.btn_conectar.clicked.connect(self.conectar_serial)
         self.ui.btn_desconectar.clicked.connect(self.desconectar_serial)
