@@ -96,5 +96,5 @@ Thumbs.db
 
 - Pedro Henrique Devens Dellalibera
 - João Gabriel Trevizol
-- Alan Hoffman dos Santos
-- Diogo Hoffman
+- Alan Hoffmann dos Santos
+- Diogo Hoffmann do Prado
