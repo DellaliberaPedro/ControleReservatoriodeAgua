@@ -6,6 +6,7 @@ checagem de limite (setpoint), estado da válvula, corte emergencial e
 histórico de eventos. A tela (ui/tela.ui + Ui_tela.py) não tem nenhuma
 regra de negócio, só o desenho.
 """
+import logging
 from datetime import datetime, timedelta
 
 from PySide6.QtCharts import QChart, QChartView, QDateTimeAxis, QLineSeries, QValueAxis
@@ -23,6 +24,15 @@ INTERVALO_SIMULACAO_MS = 2000
 HORAS_GRAFICO_DETALHE = 1
 HORAS_GRAFICO_GERAL = 24
 PROBABILIDADE_TRIP = 0.01
+
+logger = logging.getLogger(__name__)
+
+# severidade usada no smartgrid.log para cada tipo de evento da tabela
+NIVEL_LOG_POR_TIPO = {
+    TipoEvento.STATUS: logging.INFO,
+    TipoEvento.COMANDO: logging.INFO,
+    TipoEvento.ALERTA: logging.WARNING,
+}
 
 
 class MainController(QMainWindow):
@@ -302,7 +312,8 @@ class MainController(QMainWindow):
         )
         self.ui.lbl_ultimo_evento.setStyleSheet("")
         self.ui.lbl_ultimo_evento.setText(motivo)
-        self._log_evento(TipoEvento.ALERTA if avisar else TipoEvento.COMANDO, motivo, valor)
+        # fechar a valvula = corte de carga -> sempre WARNING no log de auditoria
+        self._log_evento(TipoEvento.ALERTA if avisar else TipoEvento.COMANDO, motivo, valor, nivel_log=logging.WARNING)
         self._atualizar_botoes_valvula()
         if avisar:
             QMessageBox.warning(self, "Proteção Ativada", motivo)
@@ -366,6 +377,10 @@ class MainController(QMainWindow):
     # ------------------------------------------------------------------
     # Historico
     # ------------------------------------------------------------------
-    def _log_evento(self, tipo, descricao, valor):
+    def _log_evento(self, tipo, descricao, valor, nivel_log=None):
         registro = RegistroEvento(timestamp=datetime.now(), tipo=tipo, descricao=descricao, valor_medido=valor)
         self.eventos.append(registro)
+
+        # todo evento da tabela tambem vai para o logs/smartgrid.log
+        nivel = nivel_log if nivel_log is not None else NIVEL_LOG_POR_TIPO[tipo]
+        logger.log(nivel, "%s: %s (valor medido: %s)", tipo.value, descricao, valor)
