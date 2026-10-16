@@ -42,21 +42,23 @@ python main.py
 ## Arquitetura (MVC)
 
 ```
-ControleReservatorioAgua/
-├── main.py                      # ponto de entrada da aplicação
+ControleReservatoriodeAgua/
+├── main.py                      # ponto de entrada enxuto (log -> config -> banco -> janela)
 ├── requirements.txt
 ├── .gitignore
-├── controller/
-│   ├── maincontroller.py        # lógica da janela principal
-│   └── settingscontroller.py    # lógica do modal de regras de alerta
-├── models/
-│   ├── sensor_data.py           # estruturas de dados (leitura, evento, regra)
+├── controllers/                 # lógica das janelas, sinais/slots e orquestração
+│   ├── maincontroller.py        # janela principal (dashboard)
+│   ├── settingscontroller.py    # modal de regras de alerta (com validação)
+│   └── historicocontroller.py   # janela de histórico de eventos
+├── database/                    # conexão SQLite (timeout, PRAGMA foreign_keys, init_db)
+├── models/                      # entidades, repositórios (SQL com '?'), config e log
+│   ├── sensor_data.py           # estruturas de dados (leitura, evento, regra, dispositivo)
 │   └── data_simulator.py        # gerador de leituras simuladas
-├── ui/
-│   ├── tela.ui / Ui_tela.py                         # janela principal
-│   └── tela_configuracoes.ui / Ui_tela_configuracoes.py   # modal de regras
+├── ui/                          # telas do Qt Designer (.ui -> Ui_*.py), sem regra de negócio
+├── data/                        # config.json e smartgrid.db (gerados na 1ª execução)
+├── logs/                        # smartgrid.log (auditoria)
 └── resources/
-    └── style.qss                 # tema visual (escuro)
+    └── style.qss                # tema visual (escuro)
 ```
 
 Regra de organização: nada de lógica de negócio dentro de `ui/` — os arquivos `Ui_*.py` são gerados automaticamente (`pyside6-uic`) e não devem ser editados à mão. Depois de mexer num `.ui` no Qt Designer, regenera com:

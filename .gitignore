@@ -1,17 +1,31 @@
+# --- Python: bytecode compilado (gerado sozinho a cada execução) ---
 __pycache__/
 *.py[cod]
 *.egg-info/
 
+# --- Ambientes virtuais (cada membro cria o seu localmente) ---
 .venv/
 venv/
 env/
 
+# --- IDEs / editores ---
 .vscode/
 .idea/
 
+# --- Sistema operacional ---
 .DS_Store
 Thumbs.db
 
-*.log
+# --- SQLite: banco e arquivos temporários ---
+# O smartgrid.db é criado automaticamente pelo Database.init_db() na 1ª execução.
 *.db
 *.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
+
+# --- Arquivos gerados em tempo de execução ---
+# data/config.json é recriado com valores padrão se não existir (os.path.exists).
+data/config.json
+logs/*.log
+*.log

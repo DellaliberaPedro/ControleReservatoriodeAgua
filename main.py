@@ -3,7 +3,7 @@ from pathlib import Path
 
 from PySide6.QtWidgets import QApplication
 
-from controller.maincontroller import MainController
+from controllers.maincontroller import MainController
 
 PASTA_RESOURCES = Path(__file__).resolve().parent / "resources"
 

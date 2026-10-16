@@ -13,8 +13,8 @@ from PySide6.QtCore import QDateTime, QPointF, QTimer, Qt
 from PySide6.QtGui import QColor, QPainter
 from PySide6.QtWidgets import QGraphicsView, QMainWindow, QMessageBox, QVBoxLayout
 
-from controller.historicocontroller import HistoricoController
-from controller.settingscontroller import SettingsController
+from controllers.historicocontroller import HistoricoController
+from controllers.settingscontroller import SettingsController
 from models.data_simulator import SensorSimulator
 from models.sensor_data import EstadoValvula, RegistroEvento, RegraAlerta, TipoEvento
 from ui.Ui_tela import Ui_MainWindow
