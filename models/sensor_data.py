@@ -9,6 +9,13 @@ from datetime import datetime
 from enum import Enum
 
 
+# sensores que podem receber regra de alerta (mesmos textos do combo da tela de regras)
+SENSORES_VALIDOS = ("TDS (ppm)", "Turbidez (NTU)", "Temperatura (°C)")
+
+# faixa aceita para o valor maximo de uma regra (bate com o QDoubleSpinBox da tela)
+VALOR_MAXIMO_REGRA = 1000.0
+
+
 class TipoEvento(str, Enum):
     COMANDO = "Comando"
     ALERTA = "Alerta"
