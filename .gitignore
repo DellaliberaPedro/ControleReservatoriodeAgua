@@ -27,5 +27,6 @@ Thumbs.db
 # --- Arquivos gerados em tempo de execução ---
 # data/config.json é recriado com valores padrão se não existir (os.path.exists).
 data/config.json
+data/*.tmp
 logs/*.log
 *.log

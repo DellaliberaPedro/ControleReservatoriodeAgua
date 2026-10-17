@@ -16,11 +16,11 @@ from PySide6.QtWidgets import QGraphicsView, QMainWindow, QMessageBox, QVBoxLayo
 
 from controllers.historicocontroller import HistoricoController
 from controllers.settingscontroller import SettingsController
+from models.config_manager import ConfigManager
 from models.data_simulator import SensorSimulator
 from models.sensor_data import EstadoValvula, RegistroEvento, RegraAlerta, TipoEvento
 from ui.Ui_tela import Ui_MainWindow
 
-INTERVALO_SIMULACAO_MS = 2000
 HORAS_GRAFICO_DETALHE = 1
 HORAS_GRAFICO_GERAL = 24
 PROBABILIDADE_TRIP = 0.01
@@ -41,6 +41,9 @@ class MainController(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
+        # parametros de inicializacao/comunicacao (data/config.json)
+        self.config = ConfigManager()
+
         self.simulador = SensorSimulator()
         self.estado_valvula = EstadoValvula.ABERTA
         self.sobrecarga_ativa = False
@@ -54,21 +57,35 @@ class MainController(QMainWindow):
         # historico completo de eventos (backing data da tabela, permite filtrar por data)
         self.eventos = []
 
-        # regras padrao (as mesmas que ja estavam nos spinboxes)
+        # regras padrao, com os limites iniciais vindos do config.json
+        limites = self.config.obter("limites_iniciais")
         self.regras = [
-            RegraAlerta(nome="TDS máximo", sensor="TDS (ppm)", valor_maximo=300.0, ativa=True),
-            RegraAlerta(nome="Turbidez máxima", sensor="Turbidez (NTU)", valor_maximo=5.0, ativa=True),
+            RegraAlerta(nome="TDS máximo", sensor="TDS (ppm)", valor_maximo=limites["tds_max_ppm"], ativa=True),
+            RegraAlerta(
+                nome="Turbidez máxima", sensor="Turbidez (NTU)", valor_maximo=limites["turbidez_max_ntu"], ativa=True
+            ),
         ]
+        self.ui.spin_limite_tds.setValue(limites["tds_max_ppm"])
+        self.ui.spin_limite_turbidez.setValue(limites["turbidez_max_ntu"])
 
         self._montar_graficos()
         self._carregar_historico_inicial()
         self._conectar_sinais()
+        self._aplicar_config_serial()
 
         self._log_evento(TipoEvento.STATUS, "Dashboard inicializado (dados simulados).", "-")
 
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.atualizar_telemetria)
-        self.timer.start(INTERVALO_SIMULACAO_MS)
+        self.timer.start(self._intervalo_atualizacao_ms())
+
+    def _intervalo_atualizacao_ms(self):
+        try:
+            intervalo = int(self.config.obter("intervalo_atualizacao_ms"))
+        except (TypeError, ValueError):
+            intervalo = ConfigManager.DEFAULT_CONFIG["intervalo_atualizacao_ms"]
+            logger.warning("intervalo_atualizacao_ms inválido no config.json; usando %s ms.", intervalo)
+        return max(200, intervalo)  # evita travar a tela com um valor absurdo
 
     # ------------------------------------------------------------------
     # Setup
@@ -357,10 +374,29 @@ class MainController(QMainWindow):
     # ------------------------------------------------------------------
     # Painel serial (visual, sem conexao real ainda)
     # ------------------------------------------------------------------
+    def _aplicar_config_serial(self):
+        """Preenche o painel serial com os valores salvos no config.json."""
+        serial = self.config.obter("serial")
+        for combo, valor in (
+            (self.ui.combo_porta_com, str(serial["porta"])),
+            (self.ui.combo_baud_rate, str(serial["baud_rate"])),
+        ):
+            if combo.findText(valor) < 0:  # porta/baud que nao esta na lista padrao
+                combo.addItem(valor)
+            combo.setCurrentText(valor)
+        try:
+            self.ui.spin_timeout.setValue(int(serial["timeout_s"]))
+        except (TypeError, ValueError):
+            logger.warning("timeout_s inválido no config.json: %r. Mantido o valor da tela.", serial["timeout_s"])
+
     def conectar_serial(self):
         porta = self.ui.combo_porta_com.currentText()
         baud = self.ui.combo_baud_rate.currentText()
         timeout = self.ui.spin_timeout.value()
+
+        # a ultima configuracao usada fica salva para a proxima abertura do programa
+        if not self.config.atualizar_serial(porta, baud, timeout):
+            QMessageBox.warning(self, "Configuração", "Não foi possível salvar os parâmetros em config.json.")
         self.ui.lbl_status_conexao.setText(f"Status: Conectado ({porta} @ {baud}, timeout {timeout}s)")
         self.ui.lbl_status_conexao.setStyleSheet("font-weight: bold; color: #27ae60;")
         self._log_evento(
