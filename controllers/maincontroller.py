@@ -7,6 +7,7 @@ histórico de eventos. A tela (ui/tela.ui + Ui_tela.py) não tem nenhuma
 regra de negócio, só o desenho.
 """
 import logging
+import sqlite3
 from datetime import datetime, timedelta
 
 from PySide6.QtCharts import QChart, QChartView, QDateTimeAxis, QLineSeries, QValueAxis
@@ -18,6 +19,8 @@ from controllers.historicocontroller import HistoricoController
 from controllers.settingscontroller import SettingsController
 from models.config_manager import ConfigManager
 from models.data_simulator import SensorSimulator
+from models.evento_repository import EventoRepository
+from models.regra_repository import RegraRepository
 from models.sensor_data import EstadoValvula, RegistroEvento, RegraAlerta, TipoEvento
 from ui.Ui_tela import Ui_MainWindow
 
@@ -34,6 +37,13 @@ NIVEL_LOG_POR_TIPO = {
     TipoEvento.ALERTA: logging.WARNING,
 }
 
+# sensor da regra -> (atributo da LeituraTelemetria, nome curto, unidade)
+SENSORES_LEITURA = {
+    "TDS (ppm)": ("tds_ppm", "TDS", "ppm"),
+    "Turbidez (NTU)": ("turbidez_ntu", "Turbidez", "NTU"),
+    "Temperatura (°C)": ("temperatura_c", "Temperatura", "°C"),
+}
+
 
 class MainController(QMainWindow):
     def __init__(self):
@@ -46,7 +56,6 @@ class MainController(QMainWindow):
 
         self.simulador = SensorSimulator()
         self.estado_valvula = EstadoValvula.ABERTA
-        self.sobrecarga_ativa = False
 
         # cada lista guarda o historico completo (tempo + valor) de um sensor
         self.tempos = []
@@ -54,19 +63,10 @@ class MainController(QMainWindow):
         self.tds_valores = []
         self.turbidez_valores = []
 
-        # historico completo de eventos (backing data da tabela, permite filtrar por data)
-        self.eventos = []
-
-        # regras padrao, com os limites iniciais vindos do config.json
-        limites = self.config.obter("limites_iniciais")
-        self.regras = [
-            RegraAlerta(nome="TDS máximo", sensor="TDS (ppm)", valor_maximo=limites["tds_max_ppm"], ativa=True),
-            RegraAlerta(
-                nome="Turbidez máxima", sensor="Turbidez (NTU)", valor_maximo=limites["turbidez_max_ntu"], ativa=True
-            ),
-        ]
-        self.ui.spin_limite_tds.setValue(limites["tds_max_ppm"])
-        self.ui.spin_limite_turbidez.setValue(limites["turbidez_max_ntu"])
+        # regras de alerta persistidas no SQLite (tabela regras_alerta)
+        self.regras = self._carregar_regras()
+        self.regras_violadas = set()  # regras (nome, sensor) estouradas na ultima leitura
+        self._sincronizar_spinboxes()
 
         self._montar_graficos()
         self._carregar_historico_inicial()
@@ -78,6 +78,79 @@ class MainController(QMainWindow):
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.atualizar_telemetria)
         self.timer.start(self._intervalo_atualizacao_ms())
+
+    # ------------------------------------------------------------------
+    # Regras de alerta (SQLite)
+    # ------------------------------------------------------------------
+    def _regras_padrao(self):
+        """Regras iniciais montadas a partir de limites_iniciais do config.json."""
+        limites = self.config.obter("limites_iniciais")
+        try:
+            tds = float(limites["tds_max_ppm"])
+            turbidez = float(limites["turbidez_max_ntu"])
+        except (KeyError, TypeError, ValueError):
+            logger.warning("limites_iniciais inválidos no config.json; usando os valores padrão do programa.")
+            padrao = ConfigManager.DEFAULT_CONFIG["limites_iniciais"]
+            tds, turbidez = padrao["tds_max_ppm"], padrao["turbidez_max_ntu"]
+        return [
+            RegraAlerta(nome="TDS máximo", sensor="TDS (ppm)", valor_maximo=tds, ativa=True),
+            RegraAlerta(nome="Turbidez máxima", sensor="Turbidez (NTU)", valor_maximo=turbidez, ativa=True),
+        ]
+
+    def _carregar_regras(self):
+        try:
+            regras = RegraRepository.listar_todos()
+            if not regras:  # primeira execucao: banco vazio
+                regras = self._regras_padrao()
+                RegraRepository.substituir_todas(regras)
+                logger.info("Tabela regras_alerta vazia: regras iniciais criadas a partir do config.json.")
+            return regras
+        except sqlite3.Error as erro:
+            logger.error("Falha ao carregar as regras do SQLite: %s. Usando regras padrão em memória.", erro)
+            QMessageBox.warning(self, "Banco de dados", f"Não foi possível carregar as regras salvas.\n{erro}")
+            return self._regras_padrao()
+
+    def _primeira_regra_ativa(self, sensor):
+        return next((r for r in self.regras if r.sensor == sensor and r.ativa), None)
+
+    def _sincronizar_spinboxes(self):
+        """Os spinboxes do dashboard mostram (e editam) a 1a regra ativa de TDS e de Turbidez."""
+        for sensor, spin in (("TDS (ppm)", self.ui.spin_limite_tds), ("Turbidez (NTU)", self.ui.spin_limite_turbidez)):
+            regra = self._primeira_regra_ativa(sensor)
+            spin.setEnabled(regra is not None)
+            if regra is not None:
+                spin.setValue(regra.valor_maximo)
+
+    def _alterar_limite_rapido(self, sensor, spin):
+        """Chamado quando o operador termina de editar um spinbox de limite no dashboard."""
+        regra = self._primeira_regra_ativa(sensor)
+        novo_valor = round(spin.value(), 2)
+        if regra is None or abs(regra.valor_maximo - novo_valor) < 1e-9:
+            return  # nada mudou
+
+        if novo_valor <= 0:
+            logger.warning("Entrada inválida bloqueada: limite de %s = %s (deve ser maior que zero).", sensor, novo_valor)
+            QMessageBox.warning(self, "Entrada inválida", "O limite deve ser maior que zero.")
+            spin.setValue(regra.valor_maximo)
+            return
+
+        valor_anterior = regra.valor_maximo
+        regra.valor_maximo = novo_valor
+        try:
+            if regra.id is None or not RegraRepository.atualizar(regra):
+                raise LookupError("regra não encontrada no banco")
+        except (sqlite3.Error, LookupError) as erro:
+            regra.valor_maximo = valor_anterior
+            spin.setValue(valor_anterior)
+            logger.error("Falha ao salvar o limite de %s no SQLite: %s", sensor, erro)
+            QMessageBox.critical(self, "Falha ao salvar", f"O limite não foi salvo.\n{erro}")
+            return
+
+        self._log_evento(
+            TipoEvento.COMANDO,
+            f"Limite de {sensor} alterado de {valor_anterior:.2f} para {novo_valor:.2f}.",
+            f"{novo_valor:.2f}",
+        )
 
     def _intervalo_atualizacao_ms(self):
         try:
@@ -196,20 +269,36 @@ class MainController(QMainWindow):
         self.ui.btn_desconectar.clicked.connect(self.desconectar_serial)
         self.ui.btn_abrir_configuracoes.clicked.connect(self.abrir_configuracoes)
         self.ui.btn_abrir_historico.clicked.connect(self.abrir_historico)
+        self.ui.spin_limite_tds.editingFinished.connect(
+            lambda: self._alterar_limite_rapido("TDS (ppm)", self.ui.spin_limite_tds)
+        )
+        self.ui.spin_limite_turbidez.editingFinished.connect(
+            lambda: self._alterar_limite_rapido("Turbidez (NTU)", self.ui.spin_limite_turbidez)
+        )
 
     def abrir_configuracoes(self):
         dialogo = SettingsController(self.regras, parent=self)
-        if dialogo.exec():
-            self.regras = dialogo.regras
-            for regra in self.regras:
-                if regra.sensor == "TDS (ppm)" and regra.ativa:
-                    self.ui.spin_limite_tds.setValue(regra.valor_maximo)
-                elif regra.sensor == "Turbidez (NTU)" and regra.ativa:
-                    self.ui.spin_limite_turbidez.setValue(regra.valor_maximo)
-            self._log_evento(TipoEvento.COMANDO, "Regras de alerta atualizadas via configuração.", "-")
+        if not dialogo.exec():
+            return  # operador cancelou
+
+        try:
+            RegraRepository.substituir_todas(dialogo.regras)  # transacao unica: tudo ou nada
+            self.regras = RegraRepository.listar_todos()
+        except sqlite3.Error as erro:
+            logger.error("Falha ao salvar as regras no SQLite. Rollback executado: %s", erro)
+            QMessageBox.critical(
+                self, "Falha ao salvar", f"As regras NÃO foram salvas (as anteriores foram mantidas).\n{erro}"
+            )
+            return
+
+        self.regras_violadas.clear()
+        self._sincronizar_spinboxes()
+        self._log_evento(
+            TipoEvento.COMANDO, f"Regras de alerta atualizadas via configuração ({len(self.regras)} regras).", "-"
+        )
 
     def abrir_historico(self):
-        dialogo = HistoricoController(self.eventos, parent=self)
+        dialogo = HistoricoController(parent=self)
         dialogo.exec()
 
     # ------------------------------------------------------------------
@@ -289,24 +378,40 @@ class MainController(QMainWindow):
     # Setpoints
     # ------------------------------------------------------------------
     def _checar_setpoints(self, leitura):
-        limite_tds = self.ui.spin_limite_tds.value()
-        limite_turbidez = self.ui.spin_limite_turbidez.value()
-        excedeu = leitura.tds_ppm > limite_tds or leitura.turbidez_ntu > limite_turbidez
+        """Compara a leitura com TODAS as regras ativas do banco (TDS, Turbidez e Temperatura)."""
+        violadas_agora = set()
+        for regra in self.regras:
+            if not regra.ativa or regra.sensor not in SENSORES_LEITURA:
+                continue
+            atributo, nome, unidade = SENSORES_LEITURA[regra.sensor]
+            valor = getattr(leitura, atributo)
+            if valor <= regra.valor_maximo:
+                continue
 
-        if excedeu and not self.sobrecarga_ativa:
-            self.sobrecarga_ativa = True
+            chave = (regra.nome, regra.sensor)
+            violadas_agora.add(chave)
+            if chave not in self.regras_violadas:  # registra so quando a violacao comeca
+                descricao = (
+                    f"Limite de {nome} violado: {valor:.2f} {unidade} "
+                    f"(limite configurado: {regra.valor_maximo:.2f} {unidade})."
+                )
+                self._log_evento(TipoEvento.ALERTA, descricao, f"{valor:.2f} {unidade}")
+                self._aplicar_alarme_visual(True, descricao)
+
+        if self.regras_violadas and not violadas_agora:
+            self._aplicar_alarme_visual(False, "Leituras normalizadas.")
+            self._log_evento(TipoEvento.STATUS, "Leituras normalizadas (todos os limites respeitados).", "-")
+        self.regras_violadas = violadas_agora
+
+    def _aplicar_alarme_visual(self, ativo, texto):
+        """Dashboard fica com borda amarela enquanto algum limite estiver violado."""
+        if ativo:
+            self.ui.group_telemetria.setStyleSheet("QGroupBox { border: 2px solid #e0a132; }")
             self.ui.lbl_ultimo_evento.setStyleSheet("color: #e0a132; font-weight: bold;")
-            self.ui.lbl_ultimo_evento.setText("Limite de TDS/Turbidez excedido.")
-            self._log_evento(
-                TipoEvento.ALERTA,
-                "Limite de TDS/Turbidez excedido.",
-                f"TDS {leitura.tds_ppm:.1f} ppm / Turbidez {leitura.turbidez_ntu:.2f} NTU",
-            )
-        elif not excedeu and self.sobrecarga_ativa:
-            self.sobrecarga_ativa = False
+        else:
+            self.ui.group_telemetria.setStyleSheet("")
             self.ui.lbl_ultimo_evento.setStyleSheet("")
-            self.ui.lbl_ultimo_evento.setText("Leituras normalizadas.")
-            self._log_evento(TipoEvento.STATUS, "Leituras normalizadas.", "-")
+        self.ui.lbl_ultimo_evento.setText(texto)
 
     # ------------------------------------------------------------------
     # Valvula
@@ -414,9 +519,16 @@ class MainController(QMainWindow):
     # Historico
     # ------------------------------------------------------------------
     def _log_evento(self, tipo, descricao, valor, nivel_log=None):
+        """Registra o evento no SQLite (tabela eventos) e no logs/smartgrid.log."""
         registro = RegistroEvento(timestamp=datetime.now(), tipo=tipo, descricao=descricao, valor_medido=valor)
-        self.eventos.append(registro)
 
-        # todo evento da tabela tambem vai para o logs/smartgrid.log
         nivel = nivel_log if nivel_log is not None else NIVEL_LOG_POR_TIPO[tipo]
         logger.log(nivel, "%s: %s (valor medido: %s)", tipo.value, descricao, valor)
+
+        try:
+            EventoRepository.inserir(registro)
+        except sqlite3.Error as erro:
+            # o evento continua no smartgrid.log mesmo se o banco falhar
+            logger.error("Falha ao gravar evento no SQLite (%s): %s", descricao, erro)
+            self.statusBar().showMessage(f"ERRO: evento não gravado no banco — {erro}", 10000)
+        return registro
