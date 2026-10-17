@@ -23,8 +23,26 @@ class TipoEvento(str, Enum):
 
 
 class EstadoValvula(str, Enum):
+    """Texto mostrado na tela para o estado da valvula."""
     ABERTA = "ABERTA / NORMAL"
     FECHADA = "FECHADA / PROTEÇÃO ATIVADA"
+
+
+class StatusDispositivo(str, Enum):
+    """Valor gravado na coluna dispositivos.status (CHECK status IN ('ABERTO', 'FECHADO'))."""
+    ABERTO = "ABERTO"
+    FECHADO = "FECHADO"
+
+
+@dataclass
+class Dispositivo:
+    """Atuador fisico do reservatorio (tabela dispositivos)."""
+    tag: str  # identificador unico, ex.: "VALV-01"
+    tipo: str  # "VALVULA" ou "RELE"
+    descricao: str
+    status: StatusDispositivo
+    ultima_atualizacao: datetime | None = None
+    id: int | None = None
 
 
 @dataclass
@@ -43,6 +61,7 @@ class RegraAlerta:
     sensor: str  # "TDS (ppm)" ou "Turbidez (NTU)"
     valor_maximo: float
     ativa: bool = True
+    id: int | None = None
 
 
 @dataclass
@@ -50,7 +69,9 @@ class RegistroEvento:
     timestamp: datetime
     tipo: TipoEvento
     descricao: str
-    valor_medido: str
+    valor_medido: str = "-"
+    dispositivo_id: int | None = None  # FK opcional para dispositivos.id
+    id: int | None = None
 
     def como_linha(self) -> list[str]:
         return [
