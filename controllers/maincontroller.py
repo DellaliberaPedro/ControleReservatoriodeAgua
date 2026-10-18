@@ -11,17 +11,19 @@ import sqlite3
 from datetime import datetime, timedelta
 
 from PySide6.QtCharts import QChart, QChartView, QDateTimeAxis, QLineSeries, QValueAxis
-from PySide6.QtCore import QDateTime, QPointF, QTimer, Qt
-from PySide6.QtGui import QColor, QPainter
+from PySide6.QtCore import QDateTime, QPointF, QTimer, QUrl, Qt
+from PySide6.QtGui import QAction, QColor, QDesktopServices, QPainter
 from PySide6.QtWidgets import QGraphicsView, QMainWindow, QMessageBox, QVBoxLayout
 
 from controllers.historicocontroller import HistoricoController
 from controllers.settingscontroller import SettingsController
 from models.config_manager import ConfigManager
 from models.data_simulator import SensorSimulator
+from models.dispositivo_repository import TAG_RELE_EMERGENCIA, TAG_VALVULA, DispositivoRepository
 from models.evento_repository import EventoRepository
 from models.regra_repository import RegraRepository
-from models.sensor_data import EstadoValvula, RegistroEvento, RegraAlerta, TipoEvento
+from models.logger import ARQUIVO_LOG
+from models.sensor_data import EstadoValvula, RegistroEvento, RegraAlerta, StatusDispositivo, TipoEvento
 from ui.Ui_tela import Ui_MainWindow
 
 HORAS_GRAFICO_DETALHE = 1
@@ -56,6 +58,7 @@ class MainController(QMainWindow):
 
         self.simulador = SensorSimulator()
         self.estado_valvula = EstadoValvula.ABERTA
+        self.id_valvula = None  # id da VALV-01 na tabela dispositivos (FK dos eventos)
 
         # cada lista guarda o historico completo (tempo + valor) de um sensor
         self.tempos = []
@@ -71,7 +74,9 @@ class MainController(QMainWindow):
         self._montar_graficos()
         self._carregar_historico_inicial()
         self._conectar_sinais()
+        self._montar_menu_diagnostico()
         self._aplicar_config_serial()
+        self._carregar_estado_dispositivos()
 
         self._log_evento(TipoEvento.STATUS, "Dashboard inicializado (dados simulados).", "-")
 
@@ -260,10 +265,10 @@ class MainController(QMainWindow):
 
     def _conectar_sinais(self):
         self.ui.btn_emergencia.clicked.connect(self.acionar_corte_emergencial)
-        
+
         # ---> ATALHO DE TECLADO ADICIONADO AQUI <---
         self.ui.btn_emergencia.setShortcut("Space")
-        
+
         self.ui.btn_abrir_valvula.clicked.connect(self.reabrir_valvula)
         self.ui.btn_conectar.clicked.connect(self.conectar_serial)
         self.ui.btn_desconectar.clicked.connect(self.desconectar_serial)
@@ -414,8 +419,97 @@ class MainController(QMainWindow):
         self.ui.lbl_ultimo_evento.setText(texto)
 
     # ------------------------------------------------------------------
-    # Valvula
+    # Valvula (estado persistido na tabela dispositivos)
     # ------------------------------------------------------------------
+    def _carregar_estado_dispositivos(self):
+        """Restaura o estado salvo no banco: se o app fechou com a valvula fechada, ela abre fechada."""
+        try:
+            valvula = DispositivoRepository.buscar_por_tag(TAG_VALVULA)
+        except sqlite3.Error as erro:
+            logger.error("Falha ao ler o estado da válvula no SQLite: %s. Assumindo ABERTA.", erro)
+            valvula = None
+
+        if valvula is None:
+            self._aplicar_estado_valvula(EstadoValvula.ABERTA)
+            return
+
+        self.id_valvula = valvula.id
+        estado = EstadoValvula.ABERTA if valvula.status == StatusDispositivo.ABERTO else EstadoValvula.FECHADA
+        self._aplicar_estado_valvula(estado)
+        logger.info("Estado restaurado do banco: %s = %s.", valvula.tag, valvula.status.value)
+
+    def _aplicar_estado_valvula(self, estado):
+        """So atualiza a TELA (badge + botoes). Quem grava no banco e o _mudar_estado_valvula."""
+        self.estado_valvula = estado
+        cor = "#2ecc71" if estado == EstadoValvula.ABERTA else "#c0392b"
+        self.ui.lbl_valvula_status.setText(f"Válvula: {estado.value}")
+        self.ui.lbl_valvula_status.setStyleSheet(
+            f"background-color: {cor}; color: white; font-weight: bold; border-radius: 4px; padding: 8px;"
+        )
+        self._atualizar_botoes_valvula()
+
+    def _resumo_ultima_leitura(self):
+        if not self.tds_valores:
+            return "-"
+        return f"TDS {self.tds_valores[-1]:.1f} ppm / Turbidez {self.turbidez_valores[-1]:.2f} NTU"
+
+    def _mudar_estado_valvula(self, estado_destino, tipo_evento, motivo, valor, simular_falha=False):
+        """
+        Muda o estado fisico (valvula + rele) e grava o evento numa UNICA transacao.
+        Devolve True se deu certo. Se falhar, o banco faz ROLLBACK e a tela continua
+        mostrando o estado anterior, que e o que realmente esta gravado.
+        """
+        fechando = estado_destino == EstadoValvula.FECHADA
+        if fechando:
+            # corte: valvula FECHA e o rele de emergencia ABRE o circuito da solenoide
+            novos_status = {TAG_VALVULA: StatusDispositivo.FECHADO, TAG_RELE_EMERGENCIA: StatusDispositivo.ABERTO}
+        else:
+            novos_status = {TAG_VALVULA: StatusDispositivo.ABERTO, TAG_RELE_EMERGENCIA: StatusDispositivo.FECHADO}
+
+        evento = RegistroEvento(
+            timestamp=datetime.now(),
+            tipo=tipo_evento,
+            descricao=motivo,
+            valor_medido=valor,
+            dispositivo_id=self.id_valvula,
+        )
+
+        try:
+            DispositivoRepository.alterar_estados_com_evento(novos_status, evento, simular_falha=simular_falha)
+        except (sqlite3.Error, RuntimeError, LookupError) as erro:
+            operacao = "corte emergencial" if fechando else "reabertura da válvula"
+            logger.error("Falha na operação de %s. Rollback executado: %s", operacao, erro)
+            self._registrar_estado_pos_rollback()
+            QMessageBox.critical(
+                self,
+                "Falha na operação",
+                f"A operação de {operacao} falhou e foi desfeita (ROLLBACK).\n"
+                f"Nenhuma alteração foi gravada no banco.\n\nMotivo: {erro}",
+            )
+            return False
+
+        self._aplicar_estado_valvula(estado_destino)
+        self.ui.lbl_ultimo_evento.setStyleSheet("")
+        self.ui.lbl_ultimo_evento.setText(motivo)
+        if fechando:
+            logger.warning(
+                "Corte de carga executado: %s FECHADO / %s ABERTO. Motivo: %s (valor medido: %s)",
+                TAG_VALVULA, TAG_RELE_EMERGENCIA, motivo, valor,
+            )
+        else:
+            logger.info("Válvula reaberta: %s ABERTO / %s FECHADO. (valor medido: %s)",
+                        TAG_VALVULA, TAG_RELE_EMERGENCIA, valor)
+        return True
+
+    def _registrar_estado_pos_rollback(self):
+        """Le o banco depois da falha e escreve no log o estado que ficou gravado (prova do rollback)."""
+        # a tela nao foi alterada antes da falha, entao ela ja mostra o estado correto
+        try:
+            estados = ", ".join(f"{d.tag}={d.status.value}" for d in DispositivoRepository.listar_todos())
+            logger.info("Estado no banco após o rollback: %s.", estados)
+        except sqlite3.Error as erro:
+            logger.error("Não foi possível ler o estado após o rollback: %s", erro)
+
     def _checar_protecao_espontanea(self, leitura):
         if self.estado_valvula == EstadoValvula.ABERTA and self.simulador.deveria_disparar_protecao(
             PROBABILIDADE_TRIP
@@ -426,18 +520,9 @@ class MainController(QMainWindow):
                 avisar=True,
             )
 
-    def _fechar_valvula(self, motivo, valor, avisar):
-        self.estado_valvula = EstadoValvula.FECHADA
-        self.ui.lbl_valvula_status.setText(f"Válvula: {EstadoValvula.FECHADA.value}")
-        self.ui.lbl_valvula_status.setStyleSheet(
-            "background-color: #c0392b; color: white; font-weight: bold; border-radius: 4px; padding: 8px;"
-        )
-        self.ui.lbl_ultimo_evento.setStyleSheet("")
-        self.ui.lbl_ultimo_evento.setText(motivo)
-        # fechar a valvula = corte de carga -> sempre WARNING no log de auditoria
-        self._log_evento(TipoEvento.ALERTA if avisar else TipoEvento.COMANDO, motivo, valor, nivel_log=logging.WARNING)
-        self._atualizar_botoes_valvula()
-        if avisar:
+    def _fechar_valvula(self, motivo, valor, avisar, simular_falha=False):
+        tipo = TipoEvento.ALERTA if avisar else TipoEvento.COMANDO
+        if self._mudar_estado_valvula(EstadoValvula.FECHADA, tipo, motivo, valor, simular_falha) and avisar:
             QMessageBox.warning(self, "Proteção Ativada", motivo)
 
     def acionar_corte_emergencial(self):
@@ -448,8 +533,18 @@ class MainController(QMainWindow):
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.No,
         )
-        if resposta == QMessageBox.Yes:
-            self._fechar_valvula("Corte de emergência acionado via software.", "-", avisar=False)
+        if resposta != QMessageBox.Yes:
+            return
+
+        simular = self.acao_simular_falha.isChecked()
+        self._fechar_valvula(
+            "Corte de emergência acionado via software.",
+            self._resumo_ultima_leitura(),
+            avisar=False,
+            simular_falha=simular,
+        )
+        if simular:
+            self.acao_simular_falha.setChecked(False)  # a falha simulada vale para um unico corte
 
     def reabrir_valvula(self):
         resposta = QMessageBox.question(
@@ -461,20 +556,55 @@ class MainController(QMainWindow):
         )
         if resposta != QMessageBox.Yes:
             return
-        self.estado_valvula = EstadoValvula.ABERTA
-        self.ui.lbl_valvula_status.setText(f"Válvula: {EstadoValvula.ABERTA.value}")
-        self.ui.lbl_valvula_status.setStyleSheet(
-            "background-color: #2ecc71; color: white; font-weight: bold; border-radius: 4px; padding: 8px;"
+        self._mudar_estado_valvula(
+            EstadoValvula.ABERTA,
+            TipoEvento.COMANDO,
+            "Válvula reaberta manualmente via software.",
+            self._resumo_ultima_leitura(),
         )
-        self.ui.lbl_ultimo_evento.setStyleSheet("")
-        self.ui.lbl_ultimo_evento.setText("Válvula reaberta manualmente.")
-        self._log_evento(TipoEvento.COMANDO, "Válvula reaberta manualmente via software.", "-")
-        self._atualizar_botoes_valvula()
 
     def _atualizar_botoes_valvula(self):
         aberta = self.estado_valvula == EstadoValvula.ABERTA
         self.ui.btn_emergencia.setEnabled(aberta)
         self.ui.btn_abrir_valvula.setEnabled(not aberta)
+
+    # ------------------------------------------------------------------
+    # Menu Diagnostico (demonstracao de falhas na arguicao)
+    # ------------------------------------------------------------------
+    def _montar_menu_diagnostico(self):
+        menu = self.ui.menubar.addMenu("&Diagnóstico")
+
+        self.acao_simular_falha = QAction("Simular falha no próximo corte emergencial", self)
+        self.acao_simular_falha.setCheckable(True)
+        self.acao_simular_falha.setShortcut("Ctrl+Shift+F")
+        self.acao_simular_falha.toggled.connect(self._ao_alternar_simulacao_falha)
+        menu.addAction(self.acao_simular_falha)
+
+        menu.addSeparator()
+
+        acao_abrir_log = QAction("Abrir arquivo de log (smartgrid.log)", self)
+        acao_abrir_log.setShortcut("Ctrl+L")
+        acao_abrir_log.triggered.connect(self._abrir_arquivo_log)
+        menu.addAction(acao_abrir_log)
+
+    def _ao_alternar_simulacao_falha(self, ativo):
+        if ativo:
+            logger.warning(
+                "MODO DE TESTE ATIVADO: o próximo corte emergencial vai falhar de propósito "
+                "entre a atualização dos dispositivos e o registro no histórico."
+            )
+            self.statusBar().showMessage(
+                "MODO DE TESTE: o próximo corte emergencial vai falhar de propósito (Ctrl+Shift+F desliga)."
+            )
+        else:
+            logger.info("Modo de teste de falha desativado.")
+            self.statusBar().clearMessage()
+
+    def _abrir_arquivo_log(self, _checked=False):
+        if not ARQUIVO_LOG.exists():
+            QMessageBox.information(self, "Log", "O arquivo smartgrid.log ainda não foi criado.")
+            return
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(ARQUIVO_LOG)))
 
     # ------------------------------------------------------------------
     # Painel serial (visual, sem conexao real ainda)

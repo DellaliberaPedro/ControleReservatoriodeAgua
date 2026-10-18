@@ -68,6 +68,22 @@ pyside6-uic ui/tela.ui -o ui/Ui_tela.py
 pyside6-uic ui/tela_configuracoes.ui -o ui/Ui_tela_configuracoes.py
 ```
 
+## Persistência, logs e demonstração de falhas (A1/2)
+
+Na primeira execução são criados automaticamente:
+
+| Arquivo | Conteúdo |
+|---|---|
+| `data/smartgrid.db` | SQLite: `dispositivos` (VALV-01, RELE-EMG), `eventos` (histórico) e `regras_alerta` |
+| `data/config.json` | porta COM, baud rate, timeout, limites iniciais e intervalo de atualização |
+| `logs/smartgrid.log` | auditoria com data/hora e severidade `[INFO]`, `[WARNING]`, `[ERROR]` |
+
+Roteiro da arguição:
+
+1. **Falha de validação:** *Configurar Regras de Alerta...* → dê duplo clique no valor de uma regra e digite `abc`, `-5` ou deixe em branco → *OK*. Aparece um `QMessageBox` e nada é salvo.
+2. **Rollback:** menu *Diagnóstico → Simular falha no próximo corte emergencial* (`Ctrl+Shift+F`) → *CORTE EMERGENCIAL* → *Yes*. A operação falha entre o UPDATE dos dispositivos e o INSERT do evento; a válvula continua **ABERTA** e nenhum evento novo aparece no histórico.
+3. **Auditoria:** *Diagnóstico → Abrir arquivo de log* (`Ctrl+L`) e mostre as linhas `[WARNING] Entrada inválida bloqueada...` e `[ERROR] Falha na operação de corte emergencial. Rollback executado: ...`.
+
 ## Sobre o .gitignore
 
 O `.gitignore` diz pro Git quais arquivos **não** devem entrar no repositório: a pasta `.venv/` (ambiente virtual — cada um cria o seu localmente), `__pycache__/` e `*.pyc` (bytecode compilado, gerado automaticamente toda vez que o programa roda) e configurações de IDE. Sem isso, esses arquivos mudam sozinhos a cada execução e geram conflito toda hora entre quem está usando o projeto. Se você clonar o projeto e não tiver esse arquivo, copia o conteúdo abaixo pra um arquivo chamado `.gitignore` na raiz:
