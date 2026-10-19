@@ -113,7 +113,7 @@ Thumbs.db
 ## Equipe
 
 - Pedro Henrique Devens Dellalibera
-- João Gabriel Trevizol
+- João Gabriel Trevisol
 - Alan Hoffmann dos Santos
 - Diogo Hoffmann do Prado
 
